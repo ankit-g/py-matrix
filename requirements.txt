@@ -1,0 +1,3 @@
+blessed==1.19.1
+six==1.16.0
+wcwidth==0.2.6
