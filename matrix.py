@@ -12,15 +12,15 @@ sanskrit = "ख,ग,घ,ङ,च,छ,ज,झ,ञ,ट,ठ,ड,ढ,ण,त,थ,द,
 english = "a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,s,t,u,v,w,x,y,z".split(',')
 numbers = "1,2,3,4,5,6,7,8,9,0".split(',')
 greek = ['α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', 'ι', 'κ', 'λ', 'μ', 'ν', 'ξ', 'ο', 'π', 'ρ', 'σ', 'τ', 'υ', 'φ', 'χ', 'ψ', 'ω']
-kannada = ['ಅ', 'ಆ', 'ಇ', 'ಈ', 'ಉ', 'ಋ', 'ಎ', 'ಏ', 'ಐ', 'ಒ', 'ಓ', 'ಔ', 'ಕ', 'ಖ', 'ಗ', 'ಘ', 'ಙ', 'ಚ', 'ಛ', 'ಜ',]
+kannada = ['ಅ', 'ಆ', 'ಇ', 'ಈ', 'ಎ', 'ಏ', 'ಐ', 'ಒ', 'ಓ', 'ಔ', 'ಕ', 'ಖ', 'ಗ', 'ಘ', 'ಙ', 'ಚ', 'ಛ', 'ಜ',]
 
 languages = english + kannada + sanskrit + greek + numbers
 
 class Bar(object):
 
     def __init__(self, t, x):
-        self.length = random.randint(10, t.height)
-        self.total_length = self.length + random.randint(5, t.height)
+        self.length = random.randint(10, t.height//1.5)
+        self.total_length = self.length + random.randint(5, t.height//1.5)
         self.pos = 0
         self.t = t
         self.languages = languages
