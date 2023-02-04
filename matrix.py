@@ -50,7 +50,7 @@ class River(object):
         return ' '
 
 
-class Column(object):
+class Bar(object):
 
     def __init__(self, t, x):
         self.length = random.randint(10, t.height)
@@ -138,25 +138,25 @@ def matrix_ns(t: Terminal, speed):
     """
 
     scene = [[' ' for x in range(t.width)] for y in range(t.height)]
-    columns = [random.choice([[Column(t, x)], None, None, None])
+    columns = [random.choice([[Bar(t, x)], None, None, None])
                if x % 2 else None for x in range(t.width)]
 
     with t.hidden_cursor():
         while True:
-            for idx, column in enumerate(columns):
+            for idx, bars in enumerate(columns):
 
-                if not column:
+                if not bars:
                     if idx % 2:
                         columns[idx] = random.choice(
-                            [[Column(t, idx)], None, None, None])
+                            [[Bar(t, idx)], None, None, None])
                     continue
 
-                for c in column:
-                    c.extend(scene)
-                    if c.has_bar_fallen() and c.has_u_neighbour == False:
-                        columns[idx].append(Column(t, idx))
-                        c.has_u_neighbour = True
-                    if c.has_fallen():
+                for b in bars:
+                    b.extend(scene)
+                    if b.has_bar_fallen() and b.has_u_neighbour == False:
+                        columns[idx].append(Bar(t, idx))
+                        b.has_u_neighbour = True
+                    if b.has_fallen():
                         columns[idx].pop(0)
 
             with t.location(0, 0):
