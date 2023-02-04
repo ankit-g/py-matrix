@@ -8,50 +8,13 @@ import logging
 
 logging.basicConfig(level=logging.DEBUG, filename='system.log')
 
-
-class LandEnd(Exception):
-    pass
-
-
-class RiverEnd(Exception):
-    pass
-
-
 sanskrit = "ख,ग,घ,ङ,च,छ,ज,झ,ञ,ट,ठ,ड,ढ,ण,त,थ,द,ध,न,प,फ,ब,भ,म".split(",")
 english = "a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,s,t,u,v,w,x,y,z".split(',')
 numbers = "1,2,3,4,5,6,7,8,9,0".split(',')
 greek = ['α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', 'ι', 'κ', 'λ', 'μ', 'ν', 'ξ', 'ο', 'π', 'ρ', 'σ', 'τ', 'υ', 'φ', 'χ', 'ψ', 'ω']
 kannada = ['ಅ', 'ಆ', 'ಇ', 'ಈ', 'ಉ', 'ಋ', 'ಎ', 'ಏ', 'ಐ', 'ಒ', 'ಓ', 'ಔ', 'ಕ', 'ಖ', 'ಗ', 'ಘ', 'ಙ', 'ಚ', 'ಛ', 'ಜ',]
 
-languages = english + kannada + sanskrit + greek
-
-class Land(object):
-
-    def __init__(self, t):
-        self.length = random.randint(1, int(t.height//1.5))
-        self.pos = 0
-        self.languages = languages
-
-    def get_pixel(self, t):
-        if self.pos >= self.length:
-            raise LandEnd
-        self.pos += 1
-        c = random.choice(self.languages)
-        return t.green(c) if self.pos > 1 else t.white(c)
-
-
-class River(object):
-
-    def __init__(self, t):
-        self.length = random.randint(1, t.height)
-        self.pos = 0
-
-    def get_pixel(self, t):
-        if self.pos >= self.length:
-            raise RiverEnd
-        self.pos += 1
-        return ' '
-
+languages = english + kannada + sanskrit + greek + numbers
 
 class Bar(object):
 
@@ -66,17 +29,17 @@ class Bar(object):
 
     def extend(self, scene):
 
-        if self.has_fallen(): return
-
         def go_green(x):
             return '\x1b[32m' + x + '\x1b(B\x1b[m' if self.t.green not in x else x
 
+        if self.has_fallen(): return
+
         if self.pos < self.length:
-            scene[:self.pos-1, self.x] = go_green(scene[:self.pos-1, self.x])
+            scene[self.pos-1, self.x] = go_green(scene[self.pos-1, self.x])
             scene[self.pos][self.x] = random.choice(self.languages)
         else:
             if self.pos < self.t.height:
-                scene[:self.pos-1, self.x] = go_green(scene[:self.pos-1, self.x])
+                scene[self.pos-1, self.x] = go_green(scene[self.pos-1, self.x])
                 scene[self.pos][self.x] = random.choice(self.languages)
             if self.pos - self.length < self.t.height:
                 scene[self.pos-self.length][self.x] = ' '
@@ -92,54 +55,20 @@ class Bar(object):
         return self.pos >= self.length and (self.pos - self.length) >= self.total_length
 
 
-class SceneLine(object):
-
-    def __init__(self, t):
-        self.objects = [random.choice(
-            [Land]+[River]*4)(t) if not i % 2 else None for i in range(t.width)]
-
-    def get_line(self, t):
-        line = []
-        for i, so in enumerate(self.objects):
-            try:
-                if not so:
-                    line.append(' ')
-                    continue
-                line.append(so.get_pixel(t))
-            except LandEnd:
-                so = River(t)
-                self.objects[i] = so
-                line.append(so.get_pixel(t))
-            except RiverEnd:
-                so = Land(t)
-                self.objects[i] = so
-                line.append(so.get_pixel(t))
-
-        return ''.join([c for c in line])
-
-
-def matrix_os(t: Terminal, speed):
-    """
-      Matrix old style scrolling
-    """
-    sl = SceneLine(t)
-    scene = ['' for y in range(t.height)]
-
-    with t.hidden_cursor():
-        while True:
-            for y in range(t.height):
-                with t.location(0, 0):
-                    print("\n".join([line for line in scene]), end='\r')
-                time.sleep(0.08)
-                scene = (lambda r: [sl.get_line(t)
-                         for _ in range(r)] + scene[:-r])(speed)
+def worker(bars, scene, columns, idx, t):
+    for b in bars:
+        b.extend(scene)
+        if b.has_bar_fallen() and b.has_u_neighbour == False:
+            columns[idx].append(Bar(t, idx))
+            b.has_u_neighbour = True
+        if b.has_fallen():
+            columns[idx].pop(0)
 
 #@profile
-def matrix_ns(t: Terminal, speed):
+def matrix_ns(t: Terminal):
     """
       Matrix new style scrolling
     """
-
     scene = np.array([[' ' for x in range(t.width)] for y in range(t.height)], dtype=object)
     columns = [random.choice([[Bar(t, x)], None, None, None])
                if x % 2 else None for x in range(t.width)]
@@ -147,33 +76,21 @@ def matrix_ns(t: Terminal, speed):
     with t.hidden_cursor():
         while True:
             for idx, bars in enumerate(columns):
-
                 if idx % 2: continue
-
                 if not bars:
                     columns[idx] = random.choice(
                             [[Bar(t, idx)], None, None, None])
                     continue
-
-                for b in bars:
-                    b.extend(scene)
-                    if b.has_bar_fallen() and b.has_u_neighbour == False:
-                        columns[idx].append(Bar(t, idx))
-                        b.has_u_neighbour = True
-                    if b.has_fallen():
-                        columns[idx].pop(0)
-
-            for y in range(t.height):
-                with t.location(0, y):
-                    print(''.join(scene[y]), end='\r')
+                worker(bars, scene, columns, idx, t)
+            with t.location(0, 0):
+                print('\n'.join([''.join(line) for line in scene]), end='\r')
             time.sleep(0.03)
 
 def main():
     try:
         t = Terminal()
         print(t.clear())
-#        matrix_os(t, speed=2)
-        matrix_ns(t, speed=2)
+        matrix_ns(t)
     except KeyboardInterrupt:
         print(t.clear())
         sys.exit(0)
