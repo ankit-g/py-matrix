@@ -8,11 +8,10 @@ import logging
 
 logging.basicConfig(level=logging.DEBUG, filename='system.log')
 
+
 class LandEnd(Exception):
     pass
 
-class ColumnEnd(Exception):
-    pass
 
 class RiverEnd(Exception):
     pass
@@ -54,24 +53,41 @@ class River(object):
 class Column(object):
 
     def __init__(self, t, x):
-        self.length = random.randint(1, t.height//1.5)
+        self.length = random.randint(10, t.height)
+        self.total_length = self.length + random.randint(1, t.height)
         self.pos = 0
-        self.is_falling = False
         self.t = t
         self.languages = sanskrit + english + numbers
         self.x = x
+        self.has_u_neighbour = False  # upstairs neighbour
 
-    def extend(self, y, scene):
+    def extend(self, scene):
+
+        if self.has_fallen():
+            return
+
         if self.pos < self.length:
-            self.pos += 1
-            scene[y][self.x] = random.choice(self.languages)
+            for i in range(self.pos):
+                scene[i][self.x] = self.t.green(scene[i][self.x])
+            scene[self.pos][self.x] = random.choice(self.languages)
         else:
-            scene[y][self.x] = random.choice(self.languages)
-            scene[y-self.length][self.x] = ' '
-            self.is_falling = True
+            if self.pos < self.t.height:
+                for i in range(self.pos):
+                    scene[i][self.x] = self.t.green(scene[i][self.x])
+                scene[self.pos][self.x] = random.choice(self.languages)
+            if self.pos - self.length < self.t.height:
+                scene[self.pos-self.length][self.x] = ' '
+        self.pos += 1
 
-    def fall(self):
-        pass
+    def has_fallen(self):
+        return self.pos >= self.t.height + self.length
+
+    def has_bar_fallen(self):
+        return self.pos >= self.total_length
+
+    def is_complete(self):
+        return self.pos >= self.length and (self.pos - self.length) >= self.total_length
+
 
 class SceneLine(object):
 
@@ -115,24 +131,38 @@ def matrix_os(t: Terminal, speed):
                 scene = (lambda r: [sl.get_line(t)
                          for _ in range(r)] + scene[:-r])(speed)
 
+
 def matrix_ns(t: Terminal, speed):
     """
       Matrix new style scrolling
     """
-    
+
     scene = [[' ' for x in range(t.width)] for y in range(t.height)]
-    columns = [random.choice([Column(t, x), None]) if x%2 else None for x in range(t.width)]
+    columns = [random.choice([[Column(t, x)], None, None, None])
+               if x % 2 else None for x in range(t.width)]
 
     with t.hidden_cursor():
         while True:
-            for y in range(t.height):
-                for column in columns:
-                    if not column: continue
-                    column.extend(y, scene)
+            for idx, column in enumerate(columns):
 
-                with t.location(0, 0):
-                    print("\n".join([''.join(line) for line in scene]), end='\r')
-                time.sleep(0.08)
+                if not column:
+                    if idx % 2:
+                        columns[idx] = random.choice(
+                            [[Column(t, idx)], None, None, None])
+                    continue
+
+                for c in column:
+                    c.extend(scene)
+                    if c.has_bar_fallen() and c.has_u_neighbour == False:
+                        columns[idx].append(Column(t, idx))
+                        c.has_u_neighbour = True
+                    if c.has_fallen():
+                        columns[idx].pop(0)
+
+            with t.location(0, 0):
+                print("\n".join([''.join(line) for line in scene]), end='\r')
+            time.sleep(0.008)
+
 
 def main():
     try:
