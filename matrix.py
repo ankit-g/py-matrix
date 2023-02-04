@@ -3,7 +3,7 @@ import random
 import time
 import sys
 import signal
-
+import numpy as np
 import logging
 
 logging.basicConfig(level=logging.DEBUG, filename='system.log')
@@ -20,14 +20,17 @@ class RiverEnd(Exception):
 sanskrit = "ख,ग,घ,ङ,च,छ,ज,झ,ञ,ट,ठ,ड,ढ,ण,त,थ,द,ध,न,प,फ,ब,भ,म".split(",")
 english = "a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,s,t,u,v,w,x,y,z".split(',')
 numbers = "1,2,3,4,5,6,7,8,9,0".split(',')
+greek = ['α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', 'ι', 'κ', 'λ', 'μ', 'ν', 'ξ', 'ο', 'π', 'ρ', 'σ', 'τ', 'υ', 'φ', 'χ', 'ψ', 'ω']
+kannada = ['ಅ', 'ಆ', 'ಇ', 'ಈ', 'ಉ', 'ಊ', 'ಋ', 'ಎ', 'ಏ', 'ಐ', 'ಒ', 'ಓ', 'ಔ', 'ಕ', 'ಖ', 'ಗ', 'ಘ', 'ಙ', 'ಚ', 'ಛ', 'ಜ', 'ಝ',]
 
+languages = english + kannada + sanskrit + greek
 
 class Land(object):
 
     def __init__(self, t):
         self.length = random.randint(1, int(t.height//1.5))
         self.pos = 0
-        self.languages = sanskrit + english + numbers
+        self.languages = languages
 
     def get_pixel(self, t):
         if self.pos >= self.length:
@@ -57,7 +60,7 @@ class Bar(object):
         self.total_length = self.length + random.randint(1, t.height)
         self.pos = 0
         self.t = t
-        self.languages = sanskrit + english + numbers
+        self.languages = languages
         self.x = x
         self.has_u_neighbour = False  # upstairs neighbour
 
@@ -66,14 +69,15 @@ class Bar(object):
         if self.has_fallen():
             return
 
+        def go_green(x):
+            return '\x1b[32m' + x + '\x1b(B\x1b[m' if self.t.green not in x else x
+
         if self.pos < self.length:
-            for i in range(self.pos):
-                scene[i][self.x] = self.t.green(scene[i][self.x])
+            scene[:self.pos-1, self.x] = go_green(scene[:self.pos-1, self.x])
             scene[self.pos][self.x] = random.choice(self.languages)
         else:
             if self.pos < self.t.height:
-                for i in range(self.pos):
-                    scene[i][self.x] = self.t.green(scene[i][self.x])
+                scene[:self.pos-1, self.x] = go_green(scene[:self.pos-1, self.x])
                 scene[self.pos][self.x] = random.choice(self.languages)
             if self.pos - self.length < self.t.height:
                 scene[self.pos-self.length][self.x] = ' '
@@ -137,7 +141,7 @@ def matrix_ns(t: Terminal, speed):
       Matrix new style scrolling
     """
 
-    scene = [[' ' for x in range(t.width)] for y in range(t.height)]
+    scene = np.array([[' ' for x in range(t.width)] for y in range(t.height)], dtype=object)
     columns = [random.choice([[Bar(t, x)], None, None, None])
                if x % 2 else None for x in range(t.width)]
 
@@ -161,7 +165,7 @@ def matrix_ns(t: Terminal, speed):
 
             with t.location(0, 0):
                 print("\n".join([''.join(line) for line in scene]), end='\r')
-            time.sleep(0.008)
+            time.sleep(0.03)
 
 
 def main():
