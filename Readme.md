@@ -15,4 +15,9 @@
 - once the columns have reached their length they start falling.
     write down column fall algorithm
 
+# do profiling like
+ - kernprof -l matrix.py (line profiling)
+ - python -m line_profiler matrix.py.lprof
+ - mprof run matrix.py (Memory Profiling)
+ - mprof plot
 

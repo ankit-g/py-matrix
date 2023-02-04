@@ -1,2 +1,2 @@
 clean:
-	@rm *.log
+	@rm *.log *.dat *.lprof

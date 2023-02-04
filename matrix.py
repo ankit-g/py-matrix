@@ -21,7 +21,7 @@ sanskrit = "ख,ग,घ,ङ,च,छ,ज,झ,ञ,ट,ठ,ड,ढ,ण,त,थ,द,
 english = "a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,s,t,u,v,w,x,y,z".split(',')
 numbers = "1,2,3,4,5,6,7,8,9,0".split(',')
 greek = ['α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', 'ι', 'κ', 'λ', 'μ', 'ν', 'ξ', 'ο', 'π', 'ρ', 'σ', 'τ', 'υ', 'φ', 'χ', 'ψ', 'ω']
-kannada = ['ಅ', 'ಆ', 'ಇ', 'ಈ', 'ಉ', 'ಊ', 'ಋ', 'ಎ', 'ಏ', 'ಐ', 'ಒ', 'ಓ', 'ಔ', 'ಕ', 'ಖ', 'ಗ', 'ಘ', 'ಙ', 'ಚ', 'ಛ', 'ಜ', 'ಝ',]
+kannada = ['ಅ', 'ಆ', 'ಇ', 'ಈ', 'ಉ', 'ಋ', 'ಎ', 'ಏ', 'ಐ', 'ಒ', 'ಓ', 'ಔ', 'ಕ', 'ಖ', 'ಗ', 'ಘ', 'ಙ', 'ಚ', 'ಛ', 'ಜ',]
 
 languages = english + kannada + sanskrit + greek
 
@@ -57,7 +57,7 @@ class Bar(object):
 
     def __init__(self, t, x):
         self.length = random.randint(10, t.height)
-        self.total_length = self.length + random.randint(1, t.height)
+        self.total_length = self.length + random.randint(5, t.height)
         self.pos = 0
         self.t = t
         self.languages = languages
@@ -66,8 +66,7 @@ class Bar(object):
 
     def extend(self, scene):
 
-        if self.has_fallen():
-            return
+        if self.has_fallen(): return
 
         def go_green(x):
             return '\x1b[32m' + x + '\x1b(B\x1b[m' if self.t.green not in x else x
@@ -135,7 +134,7 @@ def matrix_os(t: Terminal, speed):
                 scene = (lambda r: [sl.get_line(t)
                          for _ in range(r)] + scene[:-r])(speed)
 
-
+#@profile
 def matrix_ns(t: Terminal, speed):
     """
       Matrix new style scrolling
@@ -149,9 +148,10 @@ def matrix_ns(t: Terminal, speed):
         while True:
             for idx, bars in enumerate(columns):
 
+                if idx % 2: continue
+
                 if not bars:
-                    if idx % 2:
-                        columns[idx] = random.choice(
+                    columns[idx] = random.choice(
                             [[Bar(t, idx)], None, None, None])
                     continue
 
@@ -163,10 +163,10 @@ def matrix_ns(t: Terminal, speed):
                     if b.has_fallen():
                         columns[idx].pop(0)
 
-            with t.location(0, 0):
-                print("\n".join([''.join(line) for line in scene]), end='\r')
+            for y in range(t.height):
+                with t.location(0, y):
+                    print(''.join(scene[y]), end='\r')
             time.sleep(0.03)
-
 
 def main():
     try:
