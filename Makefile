@@ -1,2 +1,2 @@
 clean:
-	@rm *.log *.dat *.lprof
+	@rm -rf *.log *.dat *.lprof *.egg-info build dist
