@@ -1,18 +1,18 @@
 from setuptools import setup
 
 setup(
-    name='pymatrixrain',
-    version='0.1',
-    py_modules=['pymatrixrain'],
+    name='pyneorain',
+    version='1.0.0',
+    py_modules=['pyneorain'],
     install_requires=[
-        'numpy==1.24.1',
-        'blessed==1.19.1',
-        'six==1.16.0',
-        'wcwidth==0.2.6'
+        'numpy',
+        'blessed',
+        'six',
+        'wcwidth'
     ],
     entry_points={
         'console_scripts': [
-            'pymatrixrain = pymatrixrain:main'
+            'pyneorain = pyneorain:main'
         ]
     },
     author='Ankit Gupta',

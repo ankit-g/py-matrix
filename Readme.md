@@ -21,3 +21,6 @@
  - mprof run matrix.py (Memory Profiling)
  - mprof plot
 
+# publish to pypi
+ - python setup.py sdist
+ - twine upload dist/*
