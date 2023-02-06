@@ -5,6 +5,7 @@ import sys
 import signal
 import numpy as np
 import logging
+import asyncio
 
 logging.basicConfig(level=logging.DEBUG, filename='system.log')
 
@@ -65,12 +66,12 @@ def worker(bars, scene, columns, idx, t):
             columns[idx].pop(0)
 
 #@profile
-def matrix_ns(t: Terminal):
+async def matrix_ns(t: Terminal):
     """
       Matrix new style scrolling
     """
     scene = np.array([[' ' for x in range(t.width)] for y in range(t.height)], dtype=object)
-    columns = [random.choice([[Bar(t, x)], None, None, None])
+    columns = [random.choice([[Bar(t, x)]]+[None]*3)
                if x % 2 else None for x in range(t.width)]
 
     with t.hidden_cursor():
@@ -79,18 +80,18 @@ def matrix_ns(t: Terminal):
                 if idx % 2: continue
                 if not bars:
                     columns[idx] = random.choice(
-                            [[Bar(t, idx)], None, None, None])
+                            [[Bar(t, idx)]] + [None]*3)
                     continue
                 worker(bars, scene, columns, idx, t)
             with t.location(0, 0):
                 print('\n'.join([''.join(line) for line in scene]), end='\r')
-            time.sleep(0.03)
+            await asyncio.sleep(0.03)
 
 def main():
     try:
         t = Terminal()
         print(t.clear())
-        matrix_ns(t)
+        asyncio.run(matrix_ns(t))
     except KeyboardInterrupt:
         print(t.clear())
         sys.exit(0)
