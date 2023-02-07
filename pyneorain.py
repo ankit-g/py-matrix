@@ -2,9 +2,12 @@ from blessed import Terminal
 import random
 import time
 import sys
+import signal
 import logging
-from threading import Thread
-from queue import Queue
+import os
+from copy import deepcopy
+from multiprocessing import Process, Queue
+from functools import wraps
 
 logging.basicConfig(level=logging.DEBUG, filename='system.log')
 
@@ -15,6 +18,19 @@ greek = ['α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', 'ι', 'κ', 'λ', 'μ',
 kannada = ['ಅ', 'ಆ', 'ಇ', 'ಈ', 'ಎ', 'ಏ', 'ಐ', 'ಒ', 'ಓ', 'ಔ', 'ಕ', 'ಖ', 'ಗ', 'ಘ', 'ಙ', 'ಚ', 'ಛ', 'ಜ',]
 
 languages = english + kannada + sanskrit + greek + numbers
+
+class TerminalResize(Exception):
+    pass
+
+
+def process_ehandler(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except KeyboardInterrupt:
+            sys.exit(0)
+    return wrapper
 
 class Bar(object):
 
@@ -64,29 +80,28 @@ def worker(bars, scene, columns, idx, t):
         if b.has_fallen():
             columns[idx].pop(0)
 
-def print_scene(q, t):
+@process_ehandler
+def print_scene(q):
+    t = Terminal()
     while True:
         _scene = q.get()
         with t.location(0, 0):
             print('\n'.join([''.join(l) for l in _scene]), end='\r')
-        time.sleep(0.04)
+        time.sleep(1/30)
 
-#@profile
-def matrix_ns(t: Terminal):
+
+@process_ehandler
+def matrix_ns(q):
     """
       Matrix new style scrolling
     """    
-
-    q = Queue()
-
+    t = Terminal()
     scene = [[' ' for x in range(t.width)] for y in range(t.height)]
-    columns = [random.choice([[Bar(t, x)]]+[None]*3)
-               if x == 20 else None for x in range(t.width)]
-
-    Thread(target=print_scene, args=(q, t), daemon=True).start()
+    columns = [random.choice([[Bar(t, x)]]+[None]*3) if x%2 else None for x in range(t.width)]
 
     with t.hidden_cursor():
         while True:
+            if q.full(): continue
             for idx, bars in enumerate(columns):
                 if idx % 2: continue
                 if not bars:
@@ -95,17 +110,31 @@ def matrix_ns(t: Terminal):
                     continue
                 worker(bars, scene, columns, idx, t)
             q.put(scene)
-            time.sleep(0.03)
-
 
 def main():
     try:
+        q = Queue(1)
         t = Terminal()
+
+        def handle_sighup(signal, frame):
+            raise TerminalResize
+
+        signal.signal(signal.SIGWINCH, handle_sighup)
+
         print(t.clear())
-        matrix_ns(t)
+        procs = [
+                    Process(target=print_scene, args=(q,), daemon=True),
+                    Process(target=matrix_ns, args=(q,), daemon=True)
+                ]
+        for p in procs: p.start()
+        for p in procs: p.join()
     except KeyboardInterrupt:
         print(t.clear())
         sys.exit(0)
+    except TerminalResize:
+        for p in procs: p.terminate()
+        os.execv(sys.executable, ['python'] + sys.argv)
+
 
 
 if __name__ == "__main__":
