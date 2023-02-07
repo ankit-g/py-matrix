@@ -2,10 +2,9 @@ from blessed import Terminal
 import random
 import time
 import sys
-import signal
-import numpy as np
 import logging
-import asyncio
+from threading import Thread
+from queue import Queue
 
 logging.basicConfig(level=logging.DEBUG, filename='system.log')
 
@@ -36,11 +35,11 @@ class Bar(object):
         if self.has_fallen(): return
 
         if self.pos < self.length:
-            scene[self.pos-1, self.x] = go_green(scene[self.pos-1, self.x])
+            scene[self.pos-1][self.x] = go_green(scene[self.pos-1][self.x])
             scene[self.pos][self.x] = random.choice(self.languages)
         else:
             if self.pos < self.t.height:
-                scene[self.pos-1, self.x] = go_green(scene[self.pos-1, self.x])
+                scene[self.pos-1][self.x] = go_green(scene[self.pos-1][self.x])
                 scene[self.pos][self.x] = random.choice(self.languages)
             if self.pos - self.length < self.t.height:
                 scene[self.pos-self.length][self.x] = ' '
@@ -65,14 +64,26 @@ def worker(bars, scene, columns, idx, t):
         if b.has_fallen():
             columns[idx].pop(0)
 
+def print_scene(q, t):
+    while True:
+        _scene = q.get()
+        with t.location(0, 0):
+            print('\n'.join([''.join(l) for l in _scene]), end='\r')
+        time.sleep(0.04)
+
 #@profile
-async def matrix_ns(t: Terminal):
+def matrix_ns(t: Terminal):
     """
       Matrix new style scrolling
-    """
-    scene = np.array([[' ' for x in range(t.width)] for y in range(t.height)], dtype=object)
+    """    
+
+    q = Queue()
+
+    scene = [[' ' for x in range(t.width)] for y in range(t.height)]
     columns = [random.choice([[Bar(t, x)]]+[None]*3)
-               if x % 2 else None for x in range(t.width)]
+               if x == 20 else None for x in range(t.width)]
+
+    Thread(target=print_scene, args=(q, t), daemon=True).start()
 
     with t.hidden_cursor():
         while True:
@@ -83,15 +94,15 @@ async def matrix_ns(t: Terminal):
                             [[Bar(t, idx)]] + [None]*3)
                     continue
                 worker(bars, scene, columns, idx, t)
-            with t.location(0, 0):
-                print('\n'.join([''.join(line) for line in scene]), end='\r')
-            await asyncio.sleep(0.03)
+            q.put(scene)
+            time.sleep(0.03)
+
 
 def main():
     try:
         t = Terminal()
         print(t.clear())
-        asyncio.run(matrix_ns(t))
+        matrix_ns(t)
     except KeyboardInterrupt:
         print(t.clear())
         sys.exit(0)

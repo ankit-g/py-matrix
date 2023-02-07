@@ -13,9 +13,9 @@
 
 
 # do profiling like
- - kernprof -l matrix.py (line profiling)
- - python -m line_profiler matrix.py.lprof
- - mprof run matrix.py (Memory Profiling)
+ - kernprof -l pyneorain.py (line profiling)
+ - python -m line_profiler pyneorain.py.lprof
+ - mprof run pyneorain.py (Memory Profiling)
  - mprof plot
 
 # publish to pypi
