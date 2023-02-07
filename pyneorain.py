@@ -111,9 +111,10 @@ def matrix_ns(q):
                 worker(bars, scene, columns, idx, t)
             q.put(scene)
 
+
 def main():
     try:
-        q = Queue(1)
+        q = Queue(2)
         t = Terminal()
 
         def handle_sighup(signal, frame):
@@ -133,8 +134,7 @@ def main():
         sys.exit(0)
     except TerminalResize:
         for p in procs: p.terminate()
-        os.execv(sys.executable, ['python'] + sys.argv)
-
+        main()
 
 
 if __name__ == "__main__":
