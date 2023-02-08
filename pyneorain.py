@@ -32,8 +32,10 @@ def process_ehandler(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         try:
+            t = Terminal()
             return func(*args, **kwargs)
         except KeyboardInterrupt:
+            print(t.clear())
             sys.exit(0)
     return wrapper
 
@@ -54,7 +56,7 @@ class Bar(object):
         def go_green(x):
             return '\x1b[32m' + x + '\x1b(B\x1b[m' if self.t.green not in x else x
 
-        if self.has_fallen():
+        if self.has_gone():
             return
 
         if self.pos < self.length:
@@ -68,21 +70,20 @@ class Bar(object):
                 scene[self.pos-self.length][self.x] = ' '
         self.pos += 1
 
-    def has_fallen(self):
-        return self.pos >= self.t.height + self.length
+    def has_gone(self):
+        return self.pos >= self.t.height + self.total_length
 
-    def has_bar_fallen(self):
+    def has_fully_extended(self):
         return self.pos >= self.total_length
-
 
 
 def worker(bars, scene, columns, idx, t):
     for b in bars:
         b.extend(scene)
-        if b.has_bar_fallen() and b.has_u_neighbour == False:
+        if b.has_fully_extended() and b.has_u_neighbour == False:
             columns[idx].append(Bar(t, idx))
             b.has_u_neighbour = True
-        if b.has_fallen():
+        if b.has_gone():
             columns[idx].pop(0)
 
 
@@ -97,13 +98,11 @@ def print_scene(q):
 
 
 @process_ehandler
-def matrix_ns(q):
+def matrix_ns(q, scene, columns):
     """
       Matrix new style scrolling
     """
     t = Terminal()
-    scene = [[' ' for x in range(t.width)] for y in range(t.height)]
-    columns = [None for x in range(t.width)]
 
     with t.hidden_cursor():
         while True:
@@ -125,6 +124,8 @@ def main():
     try:
         q = Queue(2)
         t = Terminal()
+        scene = [[' ' for x in range(t.width)] for y in range(t.height)]
+        columns = [None for x in range(t.width)]
 
         def handle_sighup(signal, frame):
             raise TerminalResize
@@ -134,7 +135,7 @@ def main():
         print(t.clear())
         procs = [
             Process(target=print_scene, args=(q,), daemon=True),
-            Process(target=matrix_ns, args=(q,), daemon=True)
+            Process(target=matrix_ns, args=(q, scene, columns), daemon=True),
         ]
 
         for p in procs:
