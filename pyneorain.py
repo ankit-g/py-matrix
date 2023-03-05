@@ -8,6 +8,7 @@ from blessed import Terminal
 from copy import deepcopy
 from multiprocessing import Process, Queue
 from functools import wraps
+import asyncio
 
 logging.basicConfig(level=logging.DEBUG, filename='system.log')
 
@@ -88,17 +89,17 @@ def worker(bars, scene, columns, idx, t):
 
 
 @process_ehandler
-def print_scene(q):
+async def print_scene(q):
     t = Terminal()
     while True:
-        _scene = q.get()
+        _scene = await q.get()
         with t.location(0, 0):
             print('\n'.join([''.join(l) for l in _scene]), end='\r')
-        time.sleep(1/30)
+        await asyncio.sleep(1/15)
 
 
 @process_ehandler
-def matrix_ns(q, scene, columns):
+async def matrix_ns(q, scene, columns):
     """
       Matrix new style scrolling
     """
@@ -106,9 +107,6 @@ def matrix_ns(q, scene, columns):
 
     with t.hidden_cursor():
         while True:
-            if q.full():
-                time.sleep(1/60)
-                continue
             for idx, bars in enumerate(columns):
                 if idx % 2:
                     continue
@@ -117,38 +115,37 @@ def matrix_ns(q, scene, columns):
                         [[Bar(t, idx)]] + [None]*3)
                     continue
                 worker(bars, scene, columns, idx, t)
-            q.put(scene)
+            await q.put(scene)
+            await asyncio.sleep(1/15)
 
+
+async def async_main():
+
+    q = asyncio.Queue(1)
+    t = Terminal()
+    scene = [[' ' for x in range(t.width)] for y in range(t.height)]
+    columns = [None for x in range(t.width)]
+    await asyncio.gather(
+            matrix_ns(q, scene, columns),
+            matrix_ns(q, scene, columns),
+            print_scene(q),
+            print_scene(q),
+            )
+
+
+def handle_sighup(signal, frame):
+    raise TerminalResize
 
 def main():
     try:
-        q = Queue(2)
         t = Terminal()
-        scene = [[' ' for x in range(t.width)] for y in range(t.height)]
-        columns = [None for x in range(t.width)]
-
-        def handle_sighup(signal, frame):
-            raise TerminalResize
-
         signal.signal(signal.SIGWINCH, handle_sighup)
-
-        print(t.clear())
-        procs = [
-            Process(target=print_scene, args=(q,), daemon=True),
-            Process(target=matrix_ns, args=(q, scene, columns), daemon=True),
-        ]
-
-        for p in procs:
-            p.start()
-        for p in procs:
-            p.join()
+        asyncio.run(async_main())
     except KeyboardInterrupt:
         print(t.clear())
         sys.exit(0)
     except TerminalResize:
-        for p in procs:
-            p.terminate()
-        del t, q, procs
+        print(t.clear())
         main()
 
 
