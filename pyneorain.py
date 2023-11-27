@@ -93,8 +93,10 @@ async def print_scene(q):
     t = Terminal()
     while True:
         _scene = await q.get()
-        with t.location(0, 0):
-            print('\n'.join([''.join(l) for l in _scene]), end='\r')
+        def paint(t, _scene):
+            with t.location(0, 0):
+                print('\n'.join([''.join(l) for l in _scene]), end='\r')
+        await asyncio.to_thread(paint, t, _scene)
         await asyncio.sleep(1/15)
 
 
@@ -116,22 +118,18 @@ async def matrix_ns(q, scene, columns):
                     continue
                 worker(bars, scene, columns, idx, t)
             await q.put(scene)
-            await asyncio.sleep(1/15)
 
 
 async def async_main():
 
-    q = asyncio.Queue(1)
+    q = asyncio.Queue(24)
     t = Terminal()
     scene = [[' ' for x in range(t.width)] for y in range(t.height)]
     columns = [None for x in range(t.width)]
     await asyncio.gather(
             matrix_ns(q, scene, columns),
-            matrix_ns(q, scene, columns),
-            print_scene(q),
-            print_scene(q),
+            print_scene(q)
             )
-
 
 def handle_sighup(signal, frame):
     raise TerminalResize
