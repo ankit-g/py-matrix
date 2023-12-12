@@ -3,27 +3,22 @@ import os
 import time
 import random
 import signal
-import logging
 from blessed import Terminal
 from copy import deepcopy
 from multiprocessing import Process, Queue
 from functools import wraps
 import asyncio
+import toml
 
-logging.basicConfig(level=logging.DEBUG, filename='system.log')
+# Load the config
+config = toml.load('config.toml')
 
-sanskrit = ['ख', 'ग', 'घ', 'ङ', 'च', 'छ', 'ज', 'झ', 'ञ', 'ट', 'ठ',
-            'ड', 'ढ', 'ण', 'त', 'थ', 'द', 'ध', 'न', 'प', 'फ', 'ब', 'भ', 'म']
-english = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
-           'm', 'n', 'o', 'p', 'q', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
-numbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
-greek = ['α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', 'ι', 'κ', 'λ',
-         'μ', 'ν', 'ξ', 'ο', 'π', 'ρ', 'σ', 'τ', 'υ', 'φ', 'χ', 'ψ', 'ω']
-kannada = ['ಅ', 'ಆ', 'ಇ', 'ಈ', 'ಎ', 'ಏ', 'ಐ', 'ಒ',
-           'ಓ', 'ಔ', 'ಕ', 'ಖ', 'ಗ', 'ಘ', 'ಙ', 'ಚ', 'ಛ', 'ಜ']
-
-languages = english + kannada + sanskrit + greek + numbers
-
+# Access the constants
+languages = config['sanskrit']['characters'] +\
+            config['english']['characters'] +\
+            config['numbers']['characters'] +\
+            config['greek']['characters'] +\
+            config['kannada']['characters']
 
 class TerminalResize(Exception):
     pass
@@ -118,6 +113,7 @@ async def matrix_ns(q, scene, columns):
                     continue
                 worker(bars, scene, columns, idx, t)
             await q.put(scene)
+            await asyncio.sleep(0)
 
 
 async def async_main():
