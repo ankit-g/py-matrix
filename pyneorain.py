@@ -6,19 +6,13 @@ from functools import wraps
 import asyncio
 import toml
 
-# Load the config
 config = toml.load('config.toml')
 
-# Access the constants
 languages = config['sanskrit']['characters'] +\
             config['english']['characters'] +\
             config['numbers']['characters'] +\
             config['greek']['characters'] +\
             config['kannada']['characters']
-
-class TerminalResize(Exception):
-    pass
-
 
 def process_ehandler(func):
     @wraps(func)
