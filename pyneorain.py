@@ -4,15 +4,21 @@ import signal
 from blessed import Terminal
 from functools import wraps
 import asyncio
-import toml
 
-config = toml.load('config.toml')
 
-languages = config['sanskrit']['characters'] +\
-            config['english']['characters'] +\
-            config['numbers']['characters'] +\
-            config['greek']['characters'] +\
-            config['kannada']['characters']
+sanskrit = ['ख', 'ग', 'घ', 'ङ', 'च', 'छ', 'ज', 'झ', 'ञ', 'ट', 'ठ',
+            'ड', 'ढ', 'ण', 'त', 'थ', 'द', 'ध', 'न', 'प', 'फ', 'ब', 'भ', 'म']
+english = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
+           'm', 'n', 'o', 'p', 'q', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
+numbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
+greek = ['α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', 'ι', 'κ', 'λ',
+         'μ', 'ν', 'ξ', 'ο', 'π', 'ρ', 'σ', 'τ', 'υ', 'φ', 'χ', 'ψ', 'ω']
+kannada = ['ಅ', 'ಆ', 'ಇ', 'ಈ', 'ಎ', 'ಏ', 'ಐ', 'ಒ',
+           'ಓ', 'ಔ', 'ಕ', 'ಖ', 'ಗ', 'ಘ', 'ಙ', 'ಚ', 'ಛ', 'ಜ']
+
+languages = english + kannada + sanskrit + greek + numbers
+
+
 
 def process_ehandler(func):
     @wraps(func)
@@ -103,7 +109,7 @@ async def matrix_ns(q, scene, columns):
                 worker(bars, scene, columns, idx, t)
             await q.put(scene)
 
-async def async_main():
+async def matrix_run():
 
     try:
         q = asyncio.Queue(32)
@@ -123,12 +129,12 @@ sig_q = asyncio.Queue()
 async def handle_sig(sigtype):
     await sig_q.put(sigtype)
 
-async def main():
+async def async_main():
         t = Terminal()
         loop = asyncio.get_running_loop()
         loop.add_signal_handler(signal.SIGWINCH, lambda:asyncio.create_task(handle_sig(signal.SIGWINCH)))
         loop.add_signal_handler(signal.SIGINT, lambda:asyncio.create_task(handle_sig(signal.SIGINT)))
-        mtask = asyncio.create_task(async_main())
+        mtask = asyncio.create_task(matrix_run())
         while True:
             sig = await sig_q.get()
             if sig == signal.SIGINT:
@@ -142,7 +148,10 @@ async def main():
                 except asyncio.CancelledError:
                     pass
                 finally:
-                    mtask = asyncio.create_task(async_main())
+                    mtask = asyncio.create_task(matrix_run())
+
+def main():
+    asyncio.run(async_main())
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
