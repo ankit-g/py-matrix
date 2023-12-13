@@ -9,7 +9,7 @@
  - mprof plot
 
 # publish to pypi
- - python -m build
+ - python setup.py sdist
  - twine upload dist/*
 
  ![Demo GIF](output.gif)
