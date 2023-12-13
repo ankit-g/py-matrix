@@ -1,11 +1,7 @@
 import sys
-import os
-import time
 import random
 import signal
 from blessed import Terminal
-from copy import deepcopy
-from multiprocessing import Process, Queue
 from functools import wraps
 import asyncio
 import toml
@@ -76,7 +72,7 @@ class Bar(object):
 def worker(bars, scene, columns, idx, t):
     for b in bars:
         b.extend(scene)
-        if b.has_fully_extended() and b.has_u_neighbour == False:
+        if b.has_fully_extended() and not b.has_u_neighbour:
             columns[idx].append(Bar(t, idx))
             b.has_u_neighbour = True
         if b.has_gone():
@@ -90,7 +86,7 @@ async def print_scene(q):
         _scene = await q.get()
         def paint(t, _scene):
             with t.location(0, 0):
-                print('\n'.join([''.join(l) for l in _scene]), end='\r')
+                print('\n'.join([''.join(line) for line in _scene]), end='\r')
         await asyncio.to_thread(paint, t, _scene)
         await asyncio.sleep(1/15)
 
@@ -118,7 +114,7 @@ async def matrix_ns(q, scene, columns):
 
 async def async_main():
 
-    q = asyncio.Queue(24)
+    q = asyncio.Queue(32)
     t = Terminal()
     scene = [[' ' for x in range(t.width)] for y in range(t.height)]
     columns = [None for x in range(t.width)]
