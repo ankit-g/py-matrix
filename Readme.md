@@ -1,4 +1,4 @@
-# Embrace Reality. Enter the Matrix, Neo.
+# Async Version
 
 
 - This is just a humble 100-line Python module, not the full-blown Cmatrix implementation.
