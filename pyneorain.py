@@ -97,7 +97,6 @@ async def matrix_ns(q, scene, columns):
       Matrix new style scrolling
     """
     t = Terminal()
-
     with t.hidden_cursor():
         while True:
             for idx, bars in enumerate(columns):
@@ -109,35 +108,47 @@ async def matrix_ns(q, scene, columns):
                     continue
                 worker(bars, scene, columns, idx, t)
             await q.put(scene)
-            await asyncio.sleep(0)
-
 
 async def async_main():
 
-    q = asyncio.Queue(32)
-    t = Terminal()
-    scene = [[' ' for x in range(t.width)] for y in range(t.height)]
-    columns = [None for x in range(t.width)]
-    await asyncio.gather(
+    try:
+        q = asyncio.Queue(32)
+        t = Terminal()
+        scene = [[' ' for x in range(t.width)] for y in range(t.height)]
+        columns = [None for x in range(t.width)]
+        await asyncio.gather(
             matrix_ns(q, scene, columns),
             print_scene(q)
             )
+    except asyncio.CancelledError:
+        raise
 
-def handle_sighup(signal, frame):
-    raise TerminalResize
 
-def main():
-    try:
+sig_q = asyncio.Queue()
+
+async def handle_sig(sigtype):
+    await sig_q.put(sigtype)
+
+async def main():
         t = Terminal()
-        signal.signal(signal.SIGWINCH, handle_sighup)
-        asyncio.run(async_main())
-    except KeyboardInterrupt:
-        print(t.clear())
-        sys.exit(0)
-    except TerminalResize:
-        print(t.clear())
-        main()
-
+        loop = asyncio.get_running_loop()
+        loop.add_signal_handler(signal.SIGWINCH, lambda:asyncio.create_task(handle_sig(signal.SIGWINCH)))
+        loop.add_signal_handler(signal.SIGINT, lambda:asyncio.create_task(handle_sig(signal.SIGINT)))
+        mtask = asyncio.create_task(async_main())
+        while True:
+            sig = await sig_q.get()
+            if sig == signal.SIGINT:
+                print(t.clear())
+                sys.exit(0)
+            elif sig == signal.SIGWINCH:
+                print(t.clear())
+                try:
+                    mtask.cancel()
+                    await mtask
+                except asyncio.CancelledError:
+                    pass
+                finally:
+                    mtask = asyncio.create_task(async_main())
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
