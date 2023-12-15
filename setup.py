@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='pyneorain',
-    version='2.0.9',
+    version='2.1.0',
     py_modules=['pyneorain'],
     install_requires=[
         'blessed',
