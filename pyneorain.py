@@ -88,7 +88,6 @@ async def print_scene(q):
             with t.location(0, 0):
                 print('\n'.join([''.join(line) for line in _scene]), end='\r')
         await asyncio.to_thread(paint, t, _scene)
-        await asyncio.sleep(1/15)
 
 
 @process_ehandler
@@ -108,6 +107,7 @@ async def matrix_ns(q, scene, columns):
                     continue
                 worker(bars, scene, columns, idx, t)
             await q.put(scene)
+            await asyncio.sleep(1/15)
 
 async def matrix_run():
 
