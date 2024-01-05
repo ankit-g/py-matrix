@@ -36,7 +36,7 @@ class Bar(object):
 
     def __init__(self, t, x):
         self.length = random.randint(1, t.height//1.5)
-        self.total_length = self.length + random.randint(1, t.height//1.5)
+        self.gap =  random.randint(1, 30)
         self.pos = 0
         self.t = t
         self.languages = languages
@@ -63,10 +63,10 @@ class Bar(object):
         self.pos += 1
 
     def has_gone(self):
-        return self.pos >= self.t.height + self.total_length
+        return self.pos >= self.t.height + self.length
 
     def has_fully_extended(self):
-        return self.pos >= self.total_length
+        return self.pos >= self.length + self.gap
 
 
 def worker(bars, scene, columns, idx, t):
