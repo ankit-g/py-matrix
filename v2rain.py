@@ -29,20 +29,22 @@ async def matrix_producer(t, aq):
 
 async def matrix_consumer(t, aq):
     def print_term(matrix):
-        with t.hidden_cursor():
-            with t.location(0, 0):
-                print('\n'.join([''.join(row) for row in matrix]), end='\r')
-    while True:
-        await asyncio.to_thread(print_term, await aq.get())
+        with t.location(0, 0):
+            print('\n'.join([''.join(row) for row in matrix]), end='\r')
+    with t.hidden_cursor():
+        while True:
+            await asyncio.to_thread(print_term, await aq.get())
 
 async def matrix_run():
 
     try:
         t = Terminal()
-        aq = asyncio.Queue(12)
+        aq = asyncio.Queue(64)
         await asyncio.gather(
                     matrix_producer(t, aq),
-                    matrix_consumer(t, aq))
+                    matrix_consumer(t, aq),
+                    matrix_consumer(t, aq)
+                )
     except asyncio.CancelledError:
         raise
 
