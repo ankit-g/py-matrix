@@ -35,7 +35,7 @@ def process_ehandler(func):
 class Bar(object):
 
     def __init__(self, t, x):
-        self.length = random.randint(1, t.height//1.5)
+        self.length = random.randint(1, int(t.height//1.5))
         self.gap =  random.randint(1, 30)
         self.pos = 0
         self.t = t
