@@ -16,18 +16,18 @@ def matrix_producer():
     columns = [deque([Bar(t, idx)]) if idx%2 else None 
                 for idx in range(t.width)]
     while True:
-        for Q in columns:
-            if not Q:
+        for _q in columns:
+            if not _q:
                 continue
             new_bars = []
-            for b in Q:
+            for b in _q:
                 b.extend(matrix)
                 if b.has_fully_extended() and not b.has_u_neighbour:
                     new_bars.append(Bar(t, b.x))
                     b.has_u_neighbour = True
-            Q.extend(new_bars)
-            if Q[0].has_gone():
-                Q.popleft()
+            _q.extend(new_bars)
+            if _q[0].has_gone():
+                _q.popleft()
         print_term(t, matrix)
         sleep(1/24)
 
