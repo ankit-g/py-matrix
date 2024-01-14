@@ -5,18 +5,22 @@ import signal
 from multiprocessing import Process
 from time import sleep
 
-class TerminalResize(Exception):
-    pass
 
 def print_term(t, matrix):
     with t.location(0, 0):
-        print('\n'.join([''.join(row) for row in matrix]), end='\r')
+        print('\n'.join([''.join(row[:t.width]) for row in matrix[:t.height]]), end='\r')
 
-def matrix_rain():
-    t = Terminal()
-    matrix = [[' ' for x in range(t.width)] for y in range(t.height)]
-    columns = [deque([Bar(t, idx)]) if idx%2 else None 
-                for idx in range(t.width)]
+def init_matrix(t):
+    return [[' ' for x in range(t.width)] for y in range(t.height)]
+
+def init_columns(t):
+    return [deque([Bar(t, idx)]) if idx%2 else None
+            for idx in range(t.width)]
+
+def matrix_rain(t):
+    matrix = init_matrix(t)
+    columns = init_columns(t)
+
     with t.hidden_cursor():
         while True:
             for _q in columns:
@@ -35,25 +39,14 @@ def matrix_rain():
             sleep(1/24)
 
 
-def handle_sigwinch(signum, frame):
-    raise TerminalResize
-
-signal.signal(signal.SIGWINCH, handle_sigwinch)
-
 def main():
     t = Terminal()
     while True:
         try:
-            proc = Process(target=matrix_rain, daemon=True)
-            proc.start()
-            proc.join()
+            matrix_rain(t)
         except KeyboardInterrupt:
             print(t.clear())
-            proc.terminate()
             break
-        except TerminalResize:
-            print(t.clear())
-            proc.terminate()
 
 
 if __name__ == '__main__':
