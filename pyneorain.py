@@ -1,10 +1,7 @@
-import sys
-import random
-import signal
 from blessed import Terminal
-from functools import wraps
-import asyncio
-
+from collections import deque
+from time import sleep
+import random
 
 sanskrit = ['ख', 'ग', 'घ', 'ङ', 'च', 'छ', 'ज', 'झ', 'ञ', 'ट', 'ठ',
             'ड', 'ढ', 'ण', 'त', 'थ', 'द', 'ध', 'न', 'प', 'फ', 'ब', 'भ', 'म']
@@ -16,20 +13,8 @@ greek = ['α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', 'ι', 'κ', 'λ',
 kannada = ['ಅ', 'ಆ', 'ಇ', 'ಈ', 'ಎ', 'ಏ', 'ಐ', 'ಒ',
            'ಓ', 'ಔ', 'ಕ', 'ಖ', 'ಗ', 'ಘ', 'ಙ', 'ಚ', 'ಛ', 'ಜ']
 
+
 languages = english + kannada + sanskrit + greek + numbers
-
-
-
-def process_ehandler(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        try:
-            t = Terminal()
-            return func(*args, **kwargs)
-        except KeyboardInterrupt:
-            print(t.clear())
-            sys.exit(0)
-    return wrapper
 
 
 class Bar(object):
@@ -69,89 +54,51 @@ class Bar(object):
         return self.pos >= self.length + self.gap
 
 
-def worker(bars, scene, columns, idx, t):
-    for b in bars:
-        b.extend(scene)
-        if b.has_fully_extended() and not b.has_u_neighbour:
-            columns[idx].append(Bar(t, idx))
-            b.has_u_neighbour = True
-        if b.has_gone():
-            columns[idx].pop(0)
+def print_term(t, matrix):
+    with t.location(0, 0):
+        print('\n'.join([''.join(row) for row in matrix]), end='\r')
 
+def init_matrix(t):
+    return [[' ' for x in range(t.width)] for y in range(t.height)]
 
-@process_ehandler
-async def print_scene(q):
-    t = Terminal()
-    while True:
-        _scene = await q.get()
-        def paint(t, _scene):
-            with t.location(0, 0):
-                print('\n'.join([''.join(line) for line in _scene]), end='\r')
-        await asyncio.to_thread(paint, t, _scene)
+def init_columns(t):
+    return [deque([Bar(t, idx)]) if idx%2 else None
+            for idx in range(t.width)]
 
+def matrix_rain(t):
+    matrix = init_matrix(t)
+    columns = init_columns(t)
 
-@process_ehandler
-async def matrix_ns(q, scene, columns):
-    """
-      Matrix new style scrolling
-    """
-    t = Terminal()
     with t.hidden_cursor():
         while True:
-            for idx, bars in enumerate(columns):
-                if idx % 2:
+            if len(matrix) != t.height or len(matrix[0]) != t.width:
+                matrix = init_matrix(t)
+                columns = init_columns(t)
+            for _q in columns:
+                if not _q:
                     continue
-                if not bars:
-                    columns[idx] = random.choice(
-                        [[Bar(t, idx)]] + [None]*3)
-                    continue
-                worker(bars, scene, columns, idx, t)
-            await q.put(scene)
-            await asyncio.sleep(1/15)
+                new_bars = []
+                for b in _q:
+                    b.extend(matrix)
+                    if b.has_fully_extended() and not b.has_u_neighbour:
+                        new_bars.append(Bar(t, b.x))
+                        b.has_u_neighbour = True
+                _q.extend(new_bars)
+                if _q[0].has_gone():
+                    _q.popleft()
+            print_term(t, matrix)
+            sleep(1/24)
 
-async def matrix_run():
-
-    try:
-        q = asyncio.Queue(32)
-        t = Terminal()
-        scene = [[' ' for x in range(t.width)] for y in range(t.height)]
-        columns = [None for x in range(t.width)]
-        await asyncio.gather(
-            matrix_ns(q, scene, columns),
-            print_scene(q)
-            )
-    except asyncio.CancelledError:
-        raise
-
-
-sig_q = asyncio.Queue()
-
-async def handle_sig(sigtype):
-    await sig_q.put(sigtype)
-
-async def async_main():
-        t = Terminal()
-        loop = asyncio.get_running_loop()
-        loop.add_signal_handler(signal.SIGWINCH, lambda:asyncio.create_task(handle_sig(signal.SIGWINCH)))
-        loop.add_signal_handler(signal.SIGINT, lambda:asyncio.create_task(handle_sig(signal.SIGINT)))
-        mtask = asyncio.create_task(matrix_run())
-        while True:
-            sig = await sig_q.get()
-            if sig == signal.SIGINT:
-                print(t.clear())
-                sys.exit(0)
-            elif sig == signal.SIGWINCH:
-                print(t.clear())
-                try:
-                    mtask.cancel()
-                    await mtask
-                except asyncio.CancelledError:
-                    pass
-                finally:
-                    mtask = asyncio.create_task(matrix_run())
 
 def main():
-    asyncio.run(async_main())
+    t = Terminal()
+    while True:
+        try:
+            matrix_rain(t)
+        except KeyboardInterrupt:
+            print(t.clear())
+            break
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     main()
