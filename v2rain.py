@@ -8,7 +8,7 @@ import sys
 
 async def matrix_producer(t, aq):
     matrix = [[' ' for x in range(t.width)] for y in range(t.height)]
-    columns = [deque([Bar(t, idx)]) if idx %2 else None 
+    columns = [deque([Bar(t, idx)]) if idx%2 else None
                 for idx in range(t.width)]
     while True:
         for _q in columns:

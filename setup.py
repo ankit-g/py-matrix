@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='pyneorain',
-    version='2.1.1',
+    version='2.2.1',
     py_modules=['pyneorain'],
     install_requires=[
         'blessed',
@@ -14,7 +14,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'pyneorain = pyneorain:main'
+            'pyneorain = syncrain:main'
         ]
     },
     author='Ankit Gupta',
